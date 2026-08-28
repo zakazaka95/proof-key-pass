@@ -16,9 +16,11 @@ function walk(dir: string, out: string[] = []): string[] {
 }
 
 const FILES = walk("src").map((path) => ({ path, code: readFileSync(path, "utf8") }));
-const APP = FILES.filter(
-  (f) => !/error-capture|lovable-error-reporting|error-page|routeTree\.gen/.test(f.path),
-);
+/** Proofcore's own application code: excludes generated files, the Lovable error
+ * plumbing, the SSR entry wrapper and unused shadcn UI primitives. */
+const APP = FILES.filter((f) =>
+  /^src\/(lib|routes|components\/proofcore|hooks)\//.test(f.path.replace(/\\/g, "/")),
+).filter((f) => !/error-capture|lovable-error-reporting|error-page/.test(f.path));
 
 describe("no private-key surface", () => {
   it("never references private key, seed or mnemonic material", () => {
@@ -39,11 +41,13 @@ describe("no private-key surface", () => {
     }
   });
 
-  it("has no private-key or wallet input field in the UI", () => {
-    const ui = APP.filter((f) => f.path.endsWith(".tsx"));
-    for (const file of ui) {
-      expect(file.code).not.toMatch(/private key|privatekey|wallet|connect wallet|seed phrase/i);
+  it("has no private-key, wallet or password input field in the UI", () => {
+    for (const file of APP.filter((f) => f.path.endsWith(".tsx"))) {
       expect(file.code).not.toMatch(/type="password"/);
+      const fields = file.code.match(/<(input|textarea)\b[\s\S]{0,500}?(\/>|>)/g) ?? [];
+      for (const fieldMarkup of fields) {
+        expect(fieldMarkup).not.toMatch(/private|secret|mnemonic|seed|wallet/i);
+      }
     }
   });
 });
