@@ -1,6 +1,24 @@
 {
-  "name": "tanstack_start_ts",
+  "name": "proofcore",
+  "version": "0.1.0",
+  "description": "Local Technocore receipt verification and portable agent contribution passports.",
   "private": true,
+  "license": "MIT",
+  "homepage": "https://getproofcore.xyz",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zakazaka95/proof-key-pass.git"
+  },
+  "bugs": {
+    "url": "https://github.com/zakazaka95/proof-key-pass/issues"
+  },
+  "keywords": [
+    "technocore",
+    "did",
+    "ed25519",
+    "receipt",
+    "agent-passport"
+  ],
   "sideEffects": false,
   "type": "module",
   "scripts": {
@@ -8,6 +26,9 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "check": "tsc --noEmit && vitest run && vite build",
     "lint": "eslint .",
     "format": "prettier --write ."
   },

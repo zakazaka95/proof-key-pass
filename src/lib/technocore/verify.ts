@@ -17,6 +17,7 @@ import {
   bytesEqual,
   bytesToHex,
   fail,
+  TechnocoreError,
   utf8,
 } from "./encoding";
 
@@ -46,6 +47,8 @@ export interface TechnocoreReceipt {
 export interface VerifiedReceipt {
   signatureValid: true;
   structureValid: true;
+  /** Strict, sanitized receipt material needed for independent re-verification. */
+  sourceReceipt: TechnocoreReceipt;
   authenticated: {
     did: string;
     fingerprint: string;
@@ -63,9 +66,11 @@ export interface VerifiedReceipt {
   };
 }
 
+export type VerificationFailureKind = "signature" | "receipt" | "internal";
+
 export type VerificationResult =
   | { ok: true; value: VerifiedReceipt }
-  | { ok: false; error: string };
+  | { ok: false; error: string; kind: VerificationFailureKind };
 
 export function normalizeMessage(text: unknown): string {
   if (typeof text !== "string") fail("message text must be a string");
@@ -86,10 +91,7 @@ export function validateRoom(room: unknown): string {
 
 /** Extracts the raw Ed25519 public key from a did:key, validating the multicodec prefix. */
 export function publicKeyFromDid(did: unknown): Uint8Array {
-  if (
-    typeof did !== "string" ||
-    !/^did:key:z6Mk[1-9A-HJ-NP-Za-km-z]{44}$/.test(did)
-  ) {
+  if (typeof did !== "string" || !/^did:key:z6Mk[1-9A-HJ-NP-Za-km-z]{44}$/.test(did)) {
     fail("receipt DID must be an Ed25519 did:key");
   }
   const multibase = did.slice("did:key:".length);
@@ -115,10 +117,7 @@ function requireExactKeys(
 ): void {
   const actual = Object.keys(value).sort();
   const expected = [...expectedKeys].sort();
-  if (
-    actual.length !== expected.length ||
-    actual.some((key, index) => key !== expected[index])
-  ) {
+  if (actual.length !== expected.length || actual.some((key, index) => key !== expected[index])) {
     fail(`${label} contains missing or unsupported fields`);
   }
 }
@@ -138,11 +137,7 @@ export async function verifyReceipt(receipt: unknown): Promise<VerifiedReceipt> 
     fail("receipt must be a JSON object");
   }
   const value = receipt as Record<string, unknown>;
-  requireExactKeys(
-    value,
-    ["type", "version", "service", "room", "posted", "proof"],
-    "receipt",
-  );
+  requireExactKeys(value, ["type", "version", "service", "room", "posted", "proof"], "receipt");
   if (value["type"] !== RECEIPT_TYPE || value["version"] !== RECEIPT_VERSION) {
     fail("unsupported Technocore receipt type or version");
   }
@@ -216,6 +211,26 @@ export async function verifyReceipt(receipt: unknown): Promise<VerifiedReceipt> 
   return {
     signatureValid: true,
     structureValid: true,
+    sourceReceipt: {
+      type: RECEIPT_TYPE,
+      version: RECEIPT_VERSION,
+      service: RECEIPT_SERVICE,
+      room,
+      posted: {
+        seq: seq as number,
+        ts,
+        from: did as string,
+        text: proofText,
+        nonce: posted["nonce"] as number,
+      },
+      proof: {
+        did: did as string,
+        sig,
+        nonce: proofNonce,
+        text: proofText,
+        canonical,
+      },
+    },
     authenticated: {
       did: did as string,
       fingerprint: didFingerprint(did as string),
@@ -233,17 +248,21 @@ export async function verifyReceipt(receipt: unknown): Promise<VerifiedReceipt> 
   };
 }
 
-
 /** Non-throwing wrapper for UI use. */
-export async function verifyReceiptSafe(
-  receipt: unknown,
-): Promise<VerificationResult> {
+export async function verifyReceiptSafe(receipt: unknown): Promise<VerificationResult> {
   try {
     return { ok: true, value: await verifyReceipt(receipt) };
   } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown verification error";
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "unknown verification error",
+      error: message,
+      kind:
+        message === "receipt signature verification failed"
+          ? "signature"
+          : error instanceof TechnocoreError
+            ? "receipt"
+            : "internal",
     };
   }
 }

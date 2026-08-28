@@ -8,6 +8,8 @@ import {
   fetchAllPullRequests,
   fetchPullRequestStatus,
   parsePullRequestUrl,
+  statusesMatchPullRequestRefs,
+  uniquePullRequestRefs,
 } from "./github";
 
 const REF = parsePullRequestUrl("https://github.com/octocat/Hello-World/pull/42")!;
@@ -22,8 +24,7 @@ function stubFetch(impl: (url: string) => Promise<Response> | Response) {
   return spy;
 }
 
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status });
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 
 describe("parsePullRequestUrl", () => {
   it("parses a canonical PR url", () => {
@@ -38,6 +39,8 @@ describe("parsePullRequestUrl", () => {
   it("rejects non-PR urls", () => {
     expect(parsePullRequestUrl("https://github.com/octocat/Hello-World")).toBeNull();
     expect(parsePullRequestUrl("https://evil.example/x/y/pull/1")).toBeNull();
+    expect(parsePullRequestUrl("https://github.com/o/r/pull/1-not-a-pr")).toBeNull();
+    expect(parsePullRequestUrl("https://github.com/o/r/commit/abc123")).toBeNull();
   });
 });
 
@@ -54,9 +57,7 @@ describe("fetchPullRequestStatus hits the live GitHub REST endpoint", () => {
       }),
     );
     const status = await fetchPullRequestStatus(REF);
-    expect(spy.mock.calls[0]![0]).toBe(
-      "https://api.github.com/repos/octocat/Hello-World/pulls/42",
-    );
+    expect(spy.mock.calls[0]![0]).toBe("https://api.github.com/repos/octocat/Hello-World/pulls/42");
     const init = (spy.mock.calls[0] as unknown[])[1] as RequestInit;
     expect(JSON.stringify(init.headers)).not.toMatch(/authorization|token/i);
     expect(status.state).toBe("merged");
@@ -116,5 +117,32 @@ describe("GitHub error handling is graceful", () => {
     ];
     const results = await fetchAllPullRequests(refs);
     expect(results.map((r) => r.state)).toEqual(["open", "unavailable"]);
+  });
+});
+
+describe("fetched status freshness", () => {
+  it("matches statuses only to the exact ordered PR input", () => {
+    const first = parsePullRequestUrl("https://github.com/o/r/pull/1")!;
+    const second = parsePullRequestUrl("https://github.com/o/r/pull/2")!;
+    const statuses = [
+      {
+        ref: first,
+        state: "open" as const,
+        htmlUrl: first.url,
+      },
+    ];
+
+    expect(statusesMatchPullRequestRefs([first], statuses)).toBe(true);
+    expect(statusesMatchPullRequestRefs([second], statuses)).toBe(false);
+    expect(statusesMatchPullRequestRefs([first, second], statuses)).toBe(false);
+  });
+
+  it("deduplicates canonical PR identities before fetch and export", () => {
+    const refs = [
+      parsePullRequestUrl("https://github.com/Owner/Repo/pull/42")!,
+      parsePullRequestUrl("https://www.github.com/owner/repo/pull/42?tab=checks")!,
+      parsePullRequestUrl("https://github.com/owner/repo/pull/43")!,
+    ];
+    expect(uniquePullRequestRefs(refs).map((ref) => ref.number)).toEqual([42, 43]);
   });
 });

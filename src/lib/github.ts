@@ -22,18 +22,40 @@ export interface PullRequestStatus {
   error?: string | undefined;
 }
 
-const PR_PATTERN =
-  /^https?:\/\/(?:www\.)?github\.com\/([A-Za-z0-9._-]+)\/([A-Za-z0-9._-]+)\/pull\/(\d+)/i;
-
 export function parsePullRequestUrl(input: string): PullRequestRef | null {
-  const match = PR_PATTERN.exec(input.trim());
-  if (!match) return null;
-  return {
-    owner: match[1]!,
-    repo: match[2]!,
-    number: Number(match[3]),
-    url: `https://github.com/${match[1]}/${match[2]}/pull/${match[3]}`,
-  };
+  try {
+    const parsed = new URL(input.trim());
+    if (
+      !["http:", "https:"].includes(parsed.protocol) ||
+      !["github.com", "www.github.com"].includes(parsed.hostname.toLowerCase()) ||
+      parsed.username ||
+      parsed.password
+    ) {
+      return null;
+    }
+    const parts = parsed.pathname.split("/").filter(Boolean);
+    if (
+      parts.length !== 4 ||
+      parts[2] !== "pull" ||
+      !/^[A-Za-z0-9._-]+$/.test(parts[0] ?? "") ||
+      !/^[A-Za-z0-9._-]+$/.test(parts[1] ?? "") ||
+      !/^[0-9]+$/.test(parts[3] ?? "")
+    ) {
+      return null;
+    }
+    const number = Number(parts[3]);
+    if (!Number.isSafeInteger(number) || number < 1) return null;
+    const owner = parts[0]!;
+    const repo = parts[1]!;
+    return {
+      owner,
+      repo,
+      number,
+      url: `https://github.com/${owner}/${repo}/pull/${number}`,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchPullRequestStatus(
@@ -100,6 +122,33 @@ export async function fetchAllPullRequests(
   signal?: AbortSignal,
 ): Promise<PullRequestStatus[]> {
   return Promise.all(refs.map((ref) => fetchPullRequestStatus(ref, signal)));
+}
+
+export function statusesMatchPullRequestRefs(
+  refs: PullRequestRef[],
+  statuses: PullRequestStatus[],
+): boolean {
+  return (
+    refs.length === statuses.length &&
+    refs.every((ref, index) => {
+      const statusRef = statuses[index]?.ref;
+      return (
+        statusRef?.owner === ref.owner &&
+        statusRef.repo === ref.repo &&
+        statusRef.number === ref.number
+      );
+    })
+  );
+}
+
+export function uniquePullRequestRefs(refs: PullRequestRef[]): PullRequestRef[] {
+  const seen = new Set<string>();
+  return refs.filter((ref) => {
+    const key = `${ref.owner.toLowerCase()}/${ref.repo.toLowerCase()}#${ref.number}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 export function formatRepoUrl(url: string): string {

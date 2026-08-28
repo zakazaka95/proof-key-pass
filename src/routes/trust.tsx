@@ -19,7 +19,9 @@ export const Route = createFileRoute("/trust")({
         content:
           "A valid signature proves the DID key holder signed an exact payload. It does not prove publication, freshness, truth or account ownership.",
       },
+      { property: "og:url", content: "https://getproofcore.xyz/trust" },
     ],
+    links: [{ rel: "canonical", href: "https://getproofcore.xyz/trust" }],
   }),
   component: TrustPage,
 });
@@ -39,19 +41,18 @@ function TrustPage() {
       <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
         <h1 className="font-display text-3xl font-bold sm:text-4xl">Trust model</h1>
         <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-          Proofcore is deliberately narrow about what it claims. Below is exactly what
-          a verified receipt does and does not establish.
+          Proofcore is deliberately narrow about what it claims. Below is exactly what a verified
+          receipt does and does not establish.
         </p>
 
         <section className="panel mt-10 border-l-4 border-l-success p-5">
           <h2 className="font-display text-xl font-bold">What a valid signature proves</h2>
           <p className="mt-3 text-sm leading-relaxed text-foreground">
-            A valid signature proves that the holder of the DID private key signed the
-            exact canonical payload{" "}
-            <code className="font-mono text-primary">room|nonce|text</code>. Nothing
-            about that payload can be altered without breaking the signature — change
-            one character of the text, the room, the nonce or the signature itself and
-            verification fails.
+            A valid signature proves that the holder of the DID private key signed the exact
+            canonical payload <code className="font-mono text-primary">room|nonce|text</code>.
+            Nothing about that payload can be altered without breaking the signature — change one
+            character of the text, the room, the nonce or the signature itself and verification
+            fails.
           </p>
           <ul className="mt-4 space-y-2">
             {[
@@ -68,9 +69,7 @@ function TrustPage() {
         </section>
 
         <section className="panel mt-6 border-l-4 border-l-destructive p-5">
-          <h2 className="font-display text-xl font-bold">
-            What it does not independently prove
-          </h2>
+          <h2 className="font-display text-xl font-bold">What it does not independently prove</h2>
           <ul className="mt-4 space-y-2">
             {NOT_PROVEN.map((item) => (
               <li key={item} className="flex items-start gap-2 text-sm">
@@ -84,33 +83,34 @@ function TrustPage() {
         <section className="panel mt-6 border-l-4 border-l-warning p-5">
           <h2 className="font-display text-xl font-bold">Live server lookups</h2>
           <p className="mt-3 text-sm leading-relaxed text-foreground">
-            An optional live-server lookup may corroborate that a message was published
-            while a record is retained. That corroboration is weaker than the signature:
-            it depends on the Technocore server being online, honest and retaining the
-            record, and on the TLS connection between your browser and that server. It
-            is an observation, not a cryptographic proof.
+            An optional live-server lookup may corroborate that a message was published while a
+            record is retained. That corroboration is weaker than the signature: it depends on the
+            Technocore server being online, honest and retaining the record, and on the TLS
+            connection between your browser and that server. It is an observation, not a
+            cryptographic proof. Proofcore does not currently perform this lookup.
           </p>
         </section>
 
         <section className="panel mt-6 border-l-4 border-l-secondary p-5">
           <h2 className="font-display text-xl font-bold">GitHub and X links</h2>
           <p className="mt-3 text-sm leading-relaxed text-foreground">
-            Pull-request status is read from GitHub&apos;s public REST API at the moment
-            you press fetch. It shows the current public state of a public pull request.
-            It never proves that the DID owner controls that GitHub or X account — those
-            links are user-provided identity claims and are always labelled as such.
+            Pull-request status is read from GitHub&apos;s public REST API at the moment you press
+            fetch. It shows the current public state of a public pull request. It never proves that
+            the DID owner controls that GitHub or X account — those links are user-provided identity
+            claims and are always labelled as such.
           </p>
         </section>
 
         <section className="panel mt-6 p-5">
           <h2 className="font-display text-xl font-bold">Architecture</h2>
           <p className="mt-3 text-sm leading-relaxed text-foreground">
-            Everything happens in your browser: JSON parsing, schema checks, base58btc
-            and base64url decoding, Ed25519 verification, PNG card rendering and file
-            downloads. Uploaded avatars are read locally and never transmitted. Proofcore
-            has no backend, no database, no accounts and no analytics. It never requests,
-            receives, stores or generates a private key, and there is no wallet
-            connection anywhere in the product.
+            Everything happens in your browser: JSON parsing, schema checks, base58btc and base64url
+            decoding, Ed25519 verification, PNG card rendering and file downloads. Uploaded avatars
+            are read locally and never transmitted. Proofcore has no application data API, database
+            or accounts. The optional GitHub status lookup sends only public pull-request references
+            to GitHub. Hosting and CDN infrastructure may set strictly necessary security cookies.
+            Proofcore never requests, receives, stores or generates a private key, and there is no
+            wallet connection anywhere in the product.
           </p>
         </section>
 
@@ -122,8 +122,11 @@ function TrustPage() {
             Verify a receipt
           </Link>{" "}
           or{" "}
-          <Link to="/passport"
-                search={{ demo: false }} className="text-primary underline underline-offset-4">
+          <Link
+            to="/passport"
+            search={{ demo: false }}
+            className="text-primary underline underline-offset-4"
+          >
             build a passport
           </Link>
           .

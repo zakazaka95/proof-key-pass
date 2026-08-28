@@ -14,14 +14,7 @@ export function Logo({ className = "h-7 w-7", title = "Proofcore" }: LogoProps) 
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <rect
-        x="2.5"
-        y="2.5"
-        width="27"
-        height="27"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
+      <rect x="2.5" y="2.5" width="27" height="27" stroke="currentColor" strokeWidth="1.5" />
       <rect
         x="11"
         y="11"

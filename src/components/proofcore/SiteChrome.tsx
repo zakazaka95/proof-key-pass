@@ -18,15 +18,9 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-        <Link
-          to="/"
-          className="flex items-center gap-2.5"
-          onClick={() => setOpen(false)}
-        >
+        <Link to="/" className="flex items-center gap-2.5" onClick={() => setOpen(false)}>
           <Logo className="h-7 w-7 text-primary" />
-          <span className="font-display text-lg font-bold tracking-tight">
-            Proofcore
-          </span>
+          <span className="font-display text-lg font-bold tracking-tight">Proofcore</span>
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
@@ -56,10 +50,7 @@ export function SiteHeader() {
       </div>
 
       {open ? (
-        <nav
-          className="border-t border-border bg-surface md:hidden"
-          aria-label="Mobile"
-        >
+        <nav className="border-t border-border bg-surface md:hidden" aria-label="Mobile">
           {NAV.map((item) => (
             <Link
               key={item.to}
@@ -87,12 +78,19 @@ export function SiteFooter() {
           <span className="font-display text-sm font-bold">Proofcore</span>
         </div>
         <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Independent open-source community tool. Not affiliated with FLOP Labs.{" "}
-          {DISCLAIMER_TEXT}
+          Independent open-source community tool. Not affiliated with FLOP Labs. {DISCLAIMER_TEXT}
         </p>
-        <p className="label-caps">
-          No accounts · No cookies · No analytics · Local verification only
-        </p>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <p className="label-caps">No accounts · No receipt uploads · Local verification</p>
+          <a
+            href="https://github.com/zakazaka95/proof-key-pass"
+            target="_blank"
+            rel="noreferrer noopener"
+            className="font-mono text-xs text-primary underline underline-offset-4"
+          >
+            MIT-licensed source
+          </a>
+        </div>
       </div>
     </footer>
   );

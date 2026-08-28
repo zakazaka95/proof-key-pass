@@ -19,12 +19,7 @@ interface StatusChipProps {
   className?: string;
 }
 
-export function StatusChip({
-  tone = "neutral",
-  children,
-  icon,
-  className,
-}: StatusChipProps) {
+export function StatusChip({ tone = "neutral", children, icon, className }: StatusChipProps) {
   return (
     <span
       className={cn(

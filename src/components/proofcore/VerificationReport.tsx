@@ -48,9 +48,7 @@ export function Field({
         <span className="label-caps">{label}</span>
         {copyable ? <CopyButton value={value} /> : null}
       </div>
-      <p
-        className={`mt-1.5 break-all text-sm text-foreground ${mono ? "font-mono" : ""}`}
-      >
+      <p className={`mt-1.5 break-all text-sm text-foreground ${mono ? "font-mono" : ""}`}>
         {value}
       </p>
     </div>
@@ -81,7 +79,7 @@ export function VerificationReport({
           </>
         ) : (
           <StatusChip tone="error" icon={<XCircle className="size-3" />}>
-            Verification failed
+            {result.kind === "internal" ? "Verification unavailable" : "Verification failed"}
           </StatusChip>
         )}
         {userLinks && userLinks.length > 0 ? (
@@ -92,21 +90,23 @@ export function VerificationReport({
       </div>
 
       {!result.ok ? (
-        <div
-          role="alert"
-          className="panel border-l-4 border-l-destructive p-4 sm:p-5"
-        >
+        <div role="alert" className="panel border-l-4 border-l-destructive p-4 sm:p-5">
           <h3 className="font-display text-base font-bold text-destructive">
-            This receipt did not verify
+            {result.kind === "internal"
+              ? "Verification could not complete"
+              : "This receipt did not verify"}
           </h3>
-          <p className="mt-2 font-mono text-sm break-words text-foreground">
-            {result.error}
-          </p>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Any change to the DID, room, nonce, text, canonical payload or signature
-            invalidates the proof. Re-export the receipt from your signing tool and
-            try again.
-          </p>
+          <p className="mt-2 font-mono text-sm break-words text-foreground">{result.error}</p>
+          {result.kind === "internal" ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              No signature conclusion was made. Reload the page and try again.
+            </p>
+          ) : (
+            <p className="mt-3 text-sm text-muted-foreground">
+              The JSON, receipt schema, canonical payload or signature did not pass the required
+              checks. Re-export the receipt from your signing tool and try again.
+            </p>
+          )}
         </div>
       ) : (
         <>
@@ -151,9 +151,9 @@ export function VerificationReport({
               value={result.value.unverifiedServerObservation.ts}
             />
             <p className="border border-warning/60 p-3 text-sm leading-relaxed text-foreground">
-              The Ed25519 signature does <strong>not</strong> authenticate the sequence
-              number, the timestamp, the service origin, GitHub or X account ownership,
-              any linked claim, or airdrop eligibility.
+              The Ed25519 signature does <strong>not</strong> authenticate the sequence number, the
+              timestamp, the service origin, GitHub or X account ownership, any linked claim, or
+              airdrop eligibility.
             </p>
           </Section>
         </>

@@ -9,7 +9,9 @@ import { ReceiptInput } from "@/components/proofcore/ReceiptInput";
 import {
   fetchAllPullRequests,
   parsePullRequestUrl,
+  statusesMatchPullRequestRefs,
   type PullRequestStatus,
+  uniquePullRequestRefs,
 } from "@/lib/github";
 import {
   buildPassportBundle,
@@ -20,7 +22,7 @@ import {
   type PassportInput,
 } from "@/lib/passport";
 import { renderShareCard } from "@/lib/share-card";
-import { DEMO_PASSPORT, DEMO_RECEIPT_JSON } from "@/lib/technocore/demo";
+import { DEMO_PASSPORT, DEMO_RECEIPT, DEMO_RECEIPT_JSON } from "@/lib/technocore/demo";
 import { verifyReceiptSafe } from "@/lib/technocore/verify";
 
 export const Route = createFileRoute("/passport")({
@@ -41,7 +43,9 @@ export const Route = createFileRoute("/passport")({
         content:
           "Export a portable, verifiable agent contribution passport — generated entirely in your browser.",
       },
+      { property: "og:url", content: "https://getproofcore.xyz/passport" },
     ],
+    links: [{ rel: "canonical", href: "https://getproofcore.xyz/passport" }],
   }),
   component: PassportPage,
 });
@@ -62,10 +66,12 @@ function PassportPage() {
   const [input, setInput] = useState<PassportInput>(EMPTY);
   const [prText, setPrText] = useState("");
   const [receiptJson, setReceiptJson] = useState("");
-  const [verification, setVerification] = useState<PassportData["verification"]>({
-    status: "none",
-  });
+  const [verificationState, setVerificationState] = useState<{
+    source: string;
+    result: PassportData["verification"];
+  }>({ source: "", result: { status: "none" } });
   const [pullRequests, setPullRequests] = useState<PullRequestStatus[]>([]);
+  const [githubFetchedAt, setGithubFetchedAt] = useState<string | null>(null);
   const [fetching, setFetching] = useState(false);
   const [fetchNote, setFetchNote] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -73,15 +79,28 @@ function PassportPage() {
   const [generatedAt, setGeneratedAt] = useState("");
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [demoSourceLoaded, setDemoSourceLoaded] = useState(demo);
   const avatarInput = useRef<HTMLInputElement>(null);
+  const fetchAbort = useRef<AbortController | null>(null);
 
-  const isDemo = demo;
+  const verification: PassportData["verification"] =
+    verificationState.source === receiptJson ? verificationState.result : { status: "none" };
+  const isVerifyingReceipt =
+    receiptJson.trim().length > 0 && verificationState.source !== receiptJson;
+  const verifiedReceiptIsDemo =
+    verification.status === "verified" &&
+    verification.result.authenticated.did === DEMO_RECEIPT.proof.did &&
+    verification.result.authenticated.canonical === DEMO_RECEIPT.proof.canonical;
+  const isDemo = demoSourceLoaded || verifiedReceiptIsDemo;
 
   useEffect(() => {
     setGeneratedAt(new Date().toISOString().replace(".000", "").slice(0, 19) + "Z");
-  }, [receiptJson, pullRequests, input]);
+  }, [receiptJson, pullRequests, input, prText]);
 
   const loadDemo = useCallback(() => {
+    fetchAbort.current?.abort();
+    fetchAbort.current = null;
+    setDemoSourceLoaded(true);
     setInput({
       displayName: DEMO_PASSPORT.displayName,
       did: DEMO_PASSPORT.did,
@@ -92,6 +111,10 @@ function PassportPage() {
       pullRequestUrls: DEMO_PASSPORT.pullRequestUrls,
     });
     setPrText(DEMO_PASSPORT.pullRequestUrls.join("\n"));
+    setPullRequests([]);
+    setGithubFetchedAt(null);
+    setFetchNote(null);
+    setFetching(false);
     setReceiptJson(DEMO_RECEIPT_JSON);
   }, []);
 
@@ -99,11 +122,16 @@ function PassportPage() {
     if (demo) loadDemo();
   }, [demo, loadDemo]);
 
+  useEffect(() => {
+    if (verifiedReceiptIsDemo) setDemoSourceLoaded(true);
+  }, [verifiedReceiptIsDemo]);
+
   // Local verification whenever the receipt text changes.
   useEffect(() => {
+    const source = receiptJson;
     const text = receiptJson.trim();
     if (!text) {
-      setVerification({ status: "none" });
+      setVerificationState({ source, result: { status: "none" } });
       return;
     }
     let cancelled = false;
@@ -112,16 +140,26 @@ function PassportPage() {
       try {
         parsed = JSON.parse(text);
       } catch {
-        if (!cancelled) setVerification({ status: "invalid", error: "input is not valid JSON" });
+        if (!cancelled) {
+          setVerificationState({
+            source,
+            result: {
+              status: "invalid",
+              error: "input is not valid JSON",
+              kind: "receipt",
+            },
+          });
+        }
         return;
       }
       const outcome = await verifyReceiptSafe(parsed);
       if (cancelled) return;
-      setVerification(
-        outcome.ok
+      setVerificationState({
+        source,
+        result: outcome.ok
           ? { status: "verified", result: outcome.value }
-          : { status: "invalid", error: outcome.error },
-      );
+          : { status: "invalid", error: outcome.error, kind: outcome.kind },
+      });
     };
     void run();
     return () => {
@@ -129,14 +167,23 @@ function PassportPage() {
     };
   }, [receiptJson]);
 
+  useEffect(
+    () => () => {
+      fetchAbort.current?.abort();
+    },
+    [],
+  );
+
   const prRefs = useMemo(
     () =>
-      prText
-        .split(/\s+/)
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .map(parsePullRequestUrl)
-        .filter((ref): ref is NonNullable<typeof ref> => ref !== null),
+      uniquePullRequestRefs(
+        prText
+          .split(/\s+/)
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .map(parsePullRequestUrl)
+          .filter((ref): ref is NonNullable<typeof ref> => ref !== null),
+      ),
     [prText],
   );
 
@@ -150,17 +197,29 @@ function PassportPage() {
     [prText],
   );
 
+  const currentPullRequests = useMemo(
+    () => (statusesMatchPullRequestRefs(prRefs, pullRequests) ? pullRequests : []),
+    [prRefs, pullRequests],
+  );
+
   const refreshPullRequests = async () => {
     if (prRefs.length === 0) {
       setPullRequests([]);
+      setGithubFetchedAt(null);
       setFetchNote("Add at least one GitHub pull-request URL first.");
       return;
     }
+    fetchAbort.current?.abort();
+    const controller = new AbortController();
+    fetchAbort.current = controller;
     setFetching(true);
     setFetchNote(null);
-    const statuses = await fetchAllPullRequests(prRefs);
+    setPullRequests([]);
+    setGithubFetchedAt(null);
+    const statuses = await fetchAllPullRequests(prRefs, controller.signal);
+    if (controller.signal.aborted) return;
     setPullRequests(statuses);
-    setInput((prev) => ({ ...prev, pullRequestUrls: prRefs.map((r) => r.url) }));
+    setGithubFetchedAt(new Date().toISOString());
     const failed = statuses.filter((s) => s.state === "unavailable").length;
     setFetchNote(
       failed > 0
@@ -168,15 +227,54 @@ function PassportPage() {
         : `Fetched ${statuses.length} pull request${statuses.length === 1 ? "" : "s"}.`,
     );
     setFetching(false);
+    fetchAbort.current = null;
+  };
+
+  const updatePullRequestText = (value: string) => {
+    const hadFetchedStatus = pullRequests.length > 0 || fetching;
+    fetchAbort.current?.abort();
+    fetchAbort.current = null;
+    setPrText(value);
+    setPullRequests([]);
+    setGithubFetchedAt(null);
+    setFetchNote(
+      hadFetchedStatus ? "Links changed. Fetch again to refresh public GitHub status." : null,
+    );
+    setFetching(false);
+  };
+
+  const startFresh = () => {
+    fetchAbort.current?.abort();
+    fetchAbort.current = null;
+    setDemoSourceLoaded(false);
+    setInput(EMPTY);
+    setPrText("");
+    setReceiptJson("");
+    setVerificationState({ source: "", result: { status: "none" } });
+    setPullRequests([]);
+    setGithubFetchedAt(null);
+    setFetching(false);
+    setFetchNote(null);
+    setAvatarUrl(null);
+    setAvatarError(null);
+    setExportError(null);
+    if (avatarInput.current) avatarInput.current.value = "";
   };
 
   const data: PassportData = {
     input: { ...input, pullRequestUrls: prRefs.map((r) => r.url) },
     verification,
-    pullRequests,
+    pullRequests: currentPullRequests,
+    githubFetchedAt,
     generatedAt,
     isDemo,
   };
+
+  const snapshotData = (): PassportData => ({
+    ...data,
+    generatedAt: new Date().toISOString(),
+  });
+  const exportBlocked = isVerifyingReceipt || fetching;
 
   const onAvatar = (file: File | undefined) => {
     setAvatarError(null);
@@ -201,12 +299,10 @@ function PassportPage() {
     setExporting(true);
     setExportError(null);
     try {
-      const blob = await renderShareCard(data, avatarUrl);
+      const blob = await renderShareCard(snapshotData(), avatarUrl);
       downloadBlob(blob, `proofcore-${baseName}-card.png`);
     } catch (error) {
-      setExportError(
-        error instanceof Error ? error.message : "Could not render the card.",
-      );
+      setExportError(error instanceof Error ? error.message : "Could not render the card.");
     } finally {
       setExporting(false);
     }
@@ -214,7 +310,7 @@ function PassportPage() {
 
   const downloadJson = () => {
     downloadBlob(
-      new Blob([JSON.stringify(buildPassportBundle(data), null, 2)], {
+      new Blob([JSON.stringify(buildPassportBundle(snapshotData()), null, 2)], {
         type: "application/json",
       }),
       `proofcore-${baseName}-passport.json`,
@@ -223,7 +319,7 @@ function PassportPage() {
 
   const downloadSummary = () => {
     downloadBlob(
-      new Blob([buildProofSummary(data)], { type: "text/plain" }),
+      new Blob([buildProofSummary(snapshotData())], { type: "text/plain" }),
       `proofcore-${baseName}-summary.txt`,
     );
   };
@@ -264,22 +360,31 @@ function PassportPage() {
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <h1 className="font-display text-3xl font-bold sm:text-4xl">Passport builder</h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Everything below is assembled locally. Avatars stay in this browser and are
-          never transmitted.
+          Everything below is assembled locally. Avatars stay in this browser and are never
+          transmitted.
         </p>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           <div className="space-y-6">
             <section className="panel p-4 sm:p-5">
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className="font-display text-base font-bold">Agent details</h2>
-                <button
-                  type="button"
-                  onClick={loadDemo}
-                  className="border border-border px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-                >
-                  Load demo
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={startFresh}
+                    className="border border-border px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                  >
+                    Start fresh
+                  </button>
+                  <button
+                    type="button"
+                    onClick={loadDemo}
+                    className="border border-border px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                  >
+                    Load demo
+                  </button>
+                </div>
               </div>
               <div className="mt-4 space-y-3">
                 {field("displayName", "Display name", "Zaksans")}
@@ -291,7 +396,7 @@ function PassportPage() {
 
                 <div className="space-y-1.5">
                   <label htmlFor="pr-urls" className="label-caps block">
-                    Commit or pull-request URLs (one per line)
+                    Pull-request URLs (one per line)
                   </label>
                   <textarea
                     id="pr-urls"
@@ -299,14 +404,14 @@ function PassportPage() {
                     value={prText}
                     spellCheck={false}
                     placeholder="https://github.com/owner/repo/pull/1"
-                    onChange={(event) => setPrText(event.target.value)}
+                    onChange={(event) => updatePullRequestText(event.target.value)}
                     className="w-full border border-border bg-surface p-2.5 font-mono text-xs text-foreground placeholder:text-muted-foreground/70"
                   />
                   {invalidPrLines.length > 0 ? (
                     <p className="text-xs text-warning">
                       {invalidPrLines.length} line
-                      {invalidPrLines.length === 1 ? "" : "s"} are not GitHub pull-request
-                      URLs and will be ignored.
+                      {invalidPrLines.length === 1 ? "" : "s"} are not GitHub pull-request URLs and
+                      will be ignored.
                     </p>
                   ) : null}
                 </div>
@@ -377,6 +482,11 @@ function PassportPage() {
                 onChange={setReceiptJson}
                 onClear={() => setReceiptJson("")}
               />
+              {isVerifyingReceipt ? (
+                <p aria-live="polite" className="mt-3 font-mono text-xs text-muted-foreground">
+                  Verifying this receipt locally…
+                </p>
+              ) : null}
               {verification.status === "invalid" ? (
                 <p role="alert" className="mt-3 font-mono text-xs break-words text-destructive">
                   {verification.error}
@@ -394,7 +504,7 @@ function PassportPage() {
                 <button
                   type="button"
                   onClick={() => void downloadPng()}
-                  disabled={exporting}
+                  disabled={exporting || exportBlocked}
                   className="inline-flex items-center justify-center gap-2 bg-primary px-3 py-3 font-mono text-[11px] uppercase tracking-[0.14em] text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
                 >
                   {exporting ? (
@@ -407,14 +517,16 @@ function PassportPage() {
                 <button
                   type="button"
                   onClick={downloadJson}
-                  className="inline-flex items-center justify-center gap-2 border border-border px-3 py-3 font-mono text-[11px] uppercase tracking-[0.14em] transition-colors hover:border-primary hover:text-primary"
+                  disabled={exportBlocked}
+                  className="inline-flex items-center justify-center gap-2 border border-border px-3 py-3 font-mono text-[11px] uppercase tracking-[0.14em] transition-colors hover:border-primary hover:text-primary disabled:opacity-60"
                 >
                   <FileJson className="size-3.5" /> JSON bundle
                 </button>
                 <button
                   type="button"
                   onClick={downloadSummary}
-                  className="inline-flex items-center justify-center gap-2 border border-border px-3 py-3 font-mono text-[11px] uppercase tracking-[0.14em] transition-colors hover:border-primary hover:text-primary"
+                  disabled={exportBlocked}
+                  className="inline-flex items-center justify-center gap-2 border border-border px-3 py-3 font-mono text-[11px] uppercase tracking-[0.14em] transition-colors hover:border-primary hover:text-primary disabled:opacity-60"
                 >
                   <FileText className="size-3.5" /> Proof summary
                 </button>
@@ -425,8 +537,8 @@ function PassportPage() {
                 </p>
               ) : null}
               <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-                <Download className="size-3.5" aria-hidden="true" /> Files are generated
-                in this browser tab.
+                <Download className="size-3.5" aria-hidden="true" /> Files are generated in this
+                browser tab.
               </p>
             </section>
 

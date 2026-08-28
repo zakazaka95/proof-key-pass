@@ -1,10 +1,23 @@
-import { AlertTriangle, CheckCircle2, ExternalLink, GitMerge, GitPullRequest, HelpCircle, XCircle } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ExternalLink,
+  GitMerge,
+  GitPullRequest,
+  HelpCircle,
+  XCircle,
+} from "lucide-react";
 
 import { CopyButton } from "./CopyButton";
 import { Logo } from "./Logo";
 import { StatusChip, type ChipTone } from "./StatusChip";
 import type { PullRequestState } from "@/lib/github";
-import { contributionCount, truncateDid, type PassportData } from "@/lib/passport";
+import {
+  contributionCount,
+  passportDisplayDid,
+  truncateDid,
+  type PassportData,
+} from "@/lib/passport";
 
 const PR_TONE: Record<PullRequestState, ChipTone> = {
   open: "success",
@@ -28,15 +41,14 @@ export function PassportCard({
 }) {
   const verification = data.verification;
   const counts = contributionCount(data);
+  const displayedDid = passportDisplayDid(data);
 
   return (
     <article className="panel">
       <header className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
           <Logo className="h-4 w-4 text-primary" title="" />
-          <span className="font-mono text-[11px] tracking-[0.16em] uppercase">
-            Agent passport
-          </span>
+          <span className="font-mono text-[11px] tracking-[0.16em] uppercase">Agent passport</span>
         </div>
         {data.isDemo ? (
           <StatusChip tone="warning">Demo data</StatusChip>
@@ -48,11 +60,7 @@ export function PassportCard({
       <div className="flex flex-col gap-4 p-4 sm:flex-row sm:p-5">
         <div className="size-24 shrink-0 border border-border bg-background">
           {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt=""
-              className="size-full object-cover"
-            />
+            <img src={avatarUrl} alt="" className="size-full object-cover" />
           ) : (
             <div className="flex size-full items-center justify-center">
               <Logo className="h-10 w-10 text-primary" title="" />
@@ -65,7 +73,10 @@ export function PassportCard({
             {data.input.displayName || "Unnamed agent"}
           </h2>
           <p className="mt-1 font-mono text-xs text-muted-foreground">
-            {[data.input.xHandle, data.input.githubUsername && `github/${data.input.githubUsername}`]
+            {[
+              data.input.xHandle,
+              data.input.githubUsername && `github/${data.input.githubUsername}`,
+            ]
               .filter(Boolean)
               .join("   ") || "No handles provided"}
           </p>
@@ -75,20 +86,30 @@ export function PassportCard({
             </p>
           ) : null}
 
-          {data.input.did ? (
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <code className="border border-border bg-background px-2 py-1 font-mono text-xs break-all">
-                {truncateDid(data.input.did)}
-              </code>
-              <CopyButton value={data.input.did} label="Copy DID" />
+          {displayedDid.did ? (
+            <div className="mt-3">
+              <span className="label-caps">
+                {displayedDid.authenticated ? "Authenticated DID" : "Public DID claim"}
+              </span>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <code className="border border-border bg-background px-2 py-1 font-mono text-xs break-all">
+                  {truncateDid(displayedDid.did)}
+                </code>
+                <CopyButton value={displayedDid.did} label="Copy DID" />
+              </div>
             </div>
+          ) : null}
+          {displayedDid.claimMismatch ? (
+            <p className="mt-2 text-xs text-warning">
+              Entered DID does not match the receipt. The authenticated DID is shown.
+            </p>
           ) : null}
         </div>
       </div>
 
       <div className="grid gap-px border-t border-border bg-border sm:grid-cols-2">
         <div className="bg-surface p-4">
-          <span className="label-caps">Signature status</span>
+          <span className="label-caps">Receipt status</span>
           <div className="mt-2">
             {verification.status === "verified" ? (
               <StatusChip tone="success" icon={<CheckCircle2 className="size-3" />}>
@@ -96,7 +117,11 @@ export function PassportCard({
               </StatusChip>
             ) : verification.status === "invalid" ? (
               <StatusChip tone="error" icon={<XCircle className="size-3" />}>
-                Signature invalid
+                {verification.kind === "signature"
+                  ? "Signature invalid"
+                  : verification.kind === "internal"
+                    ? "Verification unavailable"
+                    : "Receipt verification failed"}
               </StatusChip>
             ) : (
               <StatusChip tone="warning" icon={<AlertTriangle className="size-3" />}>
@@ -145,7 +170,11 @@ export function PassportCard({
         <span className="label-caps">Live public GitHub pull requests</span>
         {data.pullRequests.length === 0 ? (
           <p className="mt-3 text-sm text-muted-foreground">
-            No pull requests linked yet.
+            {data.input.pullRequestUrls.length > 0
+              ? `${data.input.pullRequestUrls.length} pull request${
+                  data.input.pullRequestUrls.length === 1 ? "" : "s"
+                } linked. Fetch to add current public status.`
+              : "No pull requests linked yet."}
           </p>
         ) : (
           <ul className="mt-3 space-y-2">
@@ -187,14 +216,15 @@ export function PassportCard({
           </ul>
         )}
         <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-          GitHub status is public data fetched now. It does not prove the DID owner
-          controls this GitHub account.
+          GitHub status is public data
+          {data.githubFetchedAt ? ` fetched ${data.githubFetchedAt}` : " fetched only on request"}.
+          It does not prove the DID owner controls this GitHub account.
         </p>
       </div>
 
       <footer className="border-t border-border px-4 py-3">
         <p className="font-mono text-[11px] tracking-[0.1em] uppercase text-muted-foreground">
-          Independent Proofcore report · verified locally {data.generatedAt}
+          Independent Proofcore report · generated locally {data.generatedAt}
         </p>
       </footer>
     </article>

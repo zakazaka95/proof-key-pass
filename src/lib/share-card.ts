@@ -1,4 +1,4 @@
-import { contributionCount, truncateDid, type PassportData } from "./passport";
+import { contributionCount, passportDisplayDid, truncateDid, type PassportData } from "./passport";
 
 const W = 1200;
 const H = 630;
@@ -38,11 +38,7 @@ function drawCore(ctx: CanvasRenderingContext2D, x: number, y: number, s: number
   ctx.stroke();
 }
 
-function fitText(
-  ctx: CanvasRenderingContext2D,
-  text: string,
-  maxWidth: number,
-): string {
+function fitText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
   if (ctx.measureText(text).width <= maxWidth) return text;
   let out = text;
   while (out.length > 1 && ctx.measureText(`${out}…`).width > maxWidth) {
@@ -61,6 +57,7 @@ export async function renderShareCard(
   canvas.height = H;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas is not available in this browser");
+  const displayedDid = passportDisplayDid(data);
 
   ctx.fillStyle = COLORS.navy;
   ctx.fillRect(0, 0, W, H);
@@ -140,7 +137,10 @@ export async function renderShareCard(
 
   ctx.fillStyle = COLORS.muted;
   ctx.font = "500 20px 'JetBrains Mono', monospace";
-  const handles = [data.input.xHandle, data.input.githubUsername ? `github/${data.input.githubUsername}` : ""]
+  const handles = [
+    data.input.xHandle,
+    data.input.githubUsername ? `github/${data.input.githubUsername}` : "",
+  ]
     .filter(Boolean)
     .join("   ");
   ctx.fillText(fitText(ctx, handles, W - infoX - 90), infoX, avatarY + 68);
@@ -148,7 +148,15 @@ export async function renderShareCard(
   ctx.fillStyle = COLORS.muted;
   ctx.font = "500 18px 'JetBrains Mono', monospace";
   ctx.fillText(
-    fitText(ctx, truncateDid(data.input.did || "—", 30, 10), W - infoX - 90),
+    fitText(
+      ctx,
+      `${displayedDid.authenticated ? "DID" : "DID CLAIM"}  ${truncateDid(
+        displayedDid.did || "—",
+        30,
+        10,
+      )}`,
+      W - infoX - 90,
+    ),
     infoX,
     avatarY + 104,
   );
@@ -159,7 +167,11 @@ export async function renderShareCard(
   const chipLabel = verified
     ? "SIGNATURE VERIFIED"
     : data.verification.status === "invalid"
-      ? "SIGNATURE INVALID"
+      ? data.verification.kind === "signature"
+        ? "SIGNATURE INVALID"
+        : data.verification.kind === "internal"
+          ? "VERIFY UNAVAILABLE"
+          : "RECEIPT INVALID"
       : "NO RECEIPT";
   const chipColor = verified
     ? COLORS.green
@@ -190,10 +202,10 @@ export async function renderShareCard(
     unavailable: prs.filter((p) => p.state === "unavailable").length,
   };
   const stats: [string, string, string][] = [
-    ["CONTRIBUTIONS", String(contributionCount(data)), COLORS.ice],
-    ["MERGED PRS", String(counts.merged), COLORS.blue],
-    ["OPEN PRS", String(counts.open), COLORS.green],
-    ["CLOSED", String(counts.closed), COLORS.red],
+    ["LINKED EVIDENCE", String(contributionCount(data)), COLORS.ice],
+    ["LINKED MERGED", String(counts.merged), COLORS.blue],
+    ["LINKED OPEN", String(counts.open), COLORS.green],
+    ["LINKED CLOSED", String(counts.closed), COLORS.red],
     ["UNAVAILABLE", String(counts.unavailable), COLORS.amber],
   ];
   const statY = 396;
@@ -216,7 +228,11 @@ export async function renderShareCard(
   ctx.fillText(
     fitText(
       ctx,
-      `REPO  ${data.input.repositoryUrl.replace(/^https?:\/\/(www\.)?github\.com\//, "") || "—"}`,
+      `GITHUB STATUS ${
+        data.githubFetchedAt ? `FETCHED ${data.githubFetchedAt}` : "NOT FETCHED"
+      }  ·  REPO  ${
+        data.input.repositoryUrl.replace(/^https?:\/\/(www\.)?github\.com\//, "") || "—"
+      }`,
       W - 144,
     ),
     72,
@@ -234,7 +250,7 @@ export async function renderShareCard(
   ctx.fillText(
     fitText(
       ctx,
-      `INDEPENDENT PROOFCORE REPORT  ·  VERIFIED LOCALLY ${data.generatedAt}  ·  NOT AN ELIGIBILITY DETERMINATION`,
+      `USER-LINKED GITHUB DATA  ·  GENERATED ${data.generatedAt}  ·  NO OWNERSHIP OR ELIGIBILITY CLAIM`,
       W - 144,
     ),
     72,

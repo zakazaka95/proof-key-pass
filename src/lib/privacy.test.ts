@@ -16,6 +16,7 @@ function walk(dir: string, out: string[] = []): string[] {
 }
 
 const FILES = walk("src").map((path) => ({ path, code: readFileSync(path, "utf8") }));
+const sourcePath = (path: string) => path.replace(/\\/g, "/");
 /** Proofcore's own application code: excludes generated files, the Lovable error
  * plumbing, the SSR entry wrapper and unused shadcn UI primitives. */
 const APP = FILES.filter((f) =>
@@ -53,9 +54,11 @@ describe("no private-key surface", () => {
 });
 
 describe("receipt and avatar data never leave the browser", () => {
-  it("the only network call target is the public GitHub REST API", () => {
-    const callers = APP.filter((f) => /\bfetch\(|XMLHttpRequest|sendBeacon|navigator\.sendBeacon/.test(f.code));
-    expect(callers.map((f) => f.path)).toEqual(["src/lib/github.ts"]);
+  it("the only direct application fetch target is the public GitHub REST API", () => {
+    const callers = APP.filter((f) =>
+      /\bfetch\(|XMLHttpRequest|sendBeacon|navigator\.sendBeacon/.test(f.code),
+    );
+    expect(callers.map((f) => sourcePath(f.path))).toEqual(["src/lib/github.ts"]);
     const github = callers[0]!.code;
     const urls = github.match(/https?:\/\/[^\s`"')]+/g) ?? [];
     for (const url of urls) {
@@ -73,7 +76,7 @@ describe("receipt and avatar data never leave the browser", () => {
 
   it("avatars are read locally with FileReader only", () => {
     const avatar = APP.find((f) => f.code.includes("FileReader"))!;
-    expect(avatar.path).toBe("src/routes/passport.tsx");
+    expect(sourcePath(avatar.path)).toBe("src/routes/passport.tsx");
     expect(avatar.code).toMatch(/readAsDataURL/);
     expect(avatar.code).not.toMatch(/FormData|upload/i);
   });

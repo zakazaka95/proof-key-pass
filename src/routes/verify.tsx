@@ -23,7 +23,9 @@ export const Route = createFileRoute("/verify")({
         content:
           "Local, offline-capable Ed25519 receipt verification with precise trust levels — no keys, no accounts, no uploads.",
       },
+      { property: "og:url", content: "https://getproofcore.xyz/verify" },
     ],
+    links: [{ rel: "canonical", href: "https://getproofcore.xyz/verify" }],
   }),
   component: VerifyPage,
 });
@@ -77,7 +79,7 @@ function VerifyPage() {
         parsed = JSON.parse(text);
       } catch {
         if (!cancelled) {
-          setResult({ ok: false, error: "input is not valid JSON" });
+          setResult({ ok: false, error: "input is not valid JSON", kind: "receipt" });
           setChecking(false);
         }
         return;
@@ -105,8 +107,8 @@ function VerifyPage() {
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <h1 className="font-display text-3xl font-bold sm:text-4xl">Receipt verifier</h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Verification runs entirely in this browser tab. Nothing is uploaded and no
-          private key is ever requested.
+          Verification runs entirely in this browser tab. Nothing is uploaded and no private key is
+          ever requested.
         </p>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
@@ -121,12 +123,9 @@ function VerifyPage() {
             />
 
             <section className="panel p-4 sm:p-5">
-              <h2 className="font-display text-base font-bold">
-                Optional public links
-              </h2>
+              <h2 className="font-display text-base font-bold">Optional public links</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                These are user-provided claims. They are never authenticated by the
-                signature.
+                These are user-provided claims. They are never authenticated by the signature.
               </p>
               <div className="mt-4 space-y-3">
                 {LINK_FIELDS.map((field) => (
@@ -180,9 +179,9 @@ function VerifyPage() {
               <div className="panel p-6">
                 <h2 className="font-display text-lg font-bold">No receipt loaded</h2>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  Drop a file, paste JSON, or load the demo receipt to see the three
-                  trust levels: cryptographically authenticated data, internally
-                  consistent server observations, and user-provided links.
+                  Drop a file, paste JSON, or load the demo receipt to see the three trust levels:
+                  cryptographically authenticated data, internally consistent server observations,
+                  and user-provided links.
                 </p>
               </div>
             )}

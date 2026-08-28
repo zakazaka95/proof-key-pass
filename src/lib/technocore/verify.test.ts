@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { DEMO_RECEIPT } from "./demo";
-import { verifyReceiptSafe, publicKeyFromDid } from "./verify";
+import { verifyReceiptSafe, publicKeyFromDid, type VerificationFailureKind } from "./verify";
 import { base58btcDecode, base64urlDecode } from "./encoding";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -9,10 +9,13 @@ type Receipt = any;
 
 const clone = (): Receipt => JSON.parse(JSON.stringify(DEMO_RECEIPT)) as Receipt;
 
-const expectFailure = async (receipt: unknown, match: RegExp) => {
+const expectFailure = async (receipt: unknown, match: RegExp, kind?: VerificationFailureKind) => {
   const result = await verifyReceiptSafe(receipt);
   expect(result.ok).toBe(false);
-  if (!result.ok) expect(result.error).toMatch(match);
+  if (!result.ok) {
+    expect(result.error).toMatch(match);
+    if (kind) expect(result.kind).toBe(kind);
+  }
 };
 
 describe("verifyReceipt — valid receipt", () => {
@@ -33,8 +36,7 @@ describe("verifyReceipt — valid receipt", () => {
 describe("verifyReceipt — tampering cases", () => {
   it("rejects a changed DID", async () => {
     const r = clone();
-    (r.proof as Receipt).did =
-      "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK";
+    (r.proof as Receipt).did = "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK";
     (r.posted as Receipt).from = (r.proof as Receipt).did;
     await expectFailure(r, /signature verification failed/);
   });
@@ -48,7 +50,7 @@ describe("verifyReceipt — tampering cases", () => {
   it("rejects an invalid room format", async () => {
     const r = clone();
     r.room = "Technocore!";
-    await expectFailure(r, /room must match/);
+    await expectFailure(r, /room must match/, "receipt");
   });
 
   it("rejects a changed nonce", async () => {
@@ -69,7 +71,7 @@ describe("verifyReceipt — tampering cases", () => {
     proof.text = `${proof.text as string} extra`;
     proof.canonical = `${r.room as string}|${proof.nonce as string}|${proof.text as string}`;
     (r.posted as Receipt).text = proof.text;
-    await expectFailure(r, /signature verification failed/);
+    await expectFailure(r, /signature verification failed/, "signature");
   });
 
   it("rejects a changed signature", async () => {
@@ -95,7 +97,7 @@ describe("verifyReceipt — tampering cases", () => {
   it("rejects unknown top-level keys", async () => {
     const r = clone();
     r.eligibility = "guaranteed";
-    await expectFailure(r, /receipt contains missing or unsupported fields/);
+    await expectFailure(r, /receipt contains missing or unsupported fields/, "receipt");
   });
 
   it("rejects unknown proof keys", async () => {
@@ -124,8 +126,7 @@ describe("verifyReceipt — tampering cases", () => {
 
   it("rejects posted metadata inconsistent with the proof", async () => {
     const r = clone();
-    (r.posted as Receipt).from =
-      "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK";
+    (r.posted as Receipt).from = "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK";
     await expectFailure(r, /posted metadata is inconsistent/);
   });
 

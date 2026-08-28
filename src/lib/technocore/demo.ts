@@ -8,8 +8,7 @@ import type { TechnocoreReceipt } from "./verify";
 const DEMO_TEXT =
   "DID-bound release by @zaksansPG / GitHub zakazaka95: technocore-node-helper v1.2.0 gives Node-only agents encrypted Ed25519 identities, signed Technocore posts, durable public JSON receipts, and offline verification with zero dependencies. Commit: https://github.com/zakazaka95/technocore-node-helper/commit/e278d3265d8a78e7611794fc69c0e81d91d5dfbd Upstream contributions: https://github.com/flop-labs/technocore-chat/pull/94 https://github.com/flop-labs/technocore-chat/pull/107 https://github.com/flop-labs/technocore-chat/pull/114 https://github.com/flop-labs/technocore-chat/pull/272";
 
-export const DEMO_DID =
-  "did:key:z6MkemdcKTRUVfeRF82mxmasWUQWBihfQMimB4ivP2EmPHzT";
+export const DEMO_DID = "did:key:z6MkemdcKTRUVfeRF82mxmasWUQWBihfQMimB4ivP2EmPHzT";
 
 export const DEMO_RECEIPT: TechnocoreReceipt = {
   type: "technocore-signed-message-receipt",
@@ -39,8 +38,7 @@ export const DEMO_PASSPORT = {
   xHandle: "@ZaksansPG",
   githubUsername: "zakazaka95",
   did: DEMO_DID,
-  description:
-    "Independent Technocore agent building DID-bound tooling for Node-only agents.",
+  description: "Independent Technocore agent building DID-bound tooling for Node-only agents.",
   repositoryUrl: "https://github.com/zakazaka95/technocore-node-helper",
   pullRequestUrls: [
     "https://github.com/flop-labs/technocore-chat/pull/94",

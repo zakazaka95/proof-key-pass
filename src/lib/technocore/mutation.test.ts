@@ -58,9 +58,7 @@ describe("single-character mutations must fail verification", () => {
     const result = await verifyReceiptSafe(r);
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error).toMatch(
-        /signature verification failed|posted metadata is inconsistent/,
-      );
+      expect(result.error).toMatch(/signature verification failed|posted metadata is inconsistent/);
     }
   });
 
@@ -91,9 +89,7 @@ describe("server observation fields are not covered by the signature", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.signatureValid).toBe(true);
-      expect(result.value.unverifiedServerObservation.seq).toBe(
-        DEMO_RECEIPT.posted.seq + 1,
-      );
+      expect(result.value.unverifiedServerObservation.seq).toBe(DEMO_RECEIPT.posted.seq + 1);
       // seq/ts/service must never appear in the authenticated block
       expect(Object.keys(result.value.authenticated)).toEqual([
         "did",

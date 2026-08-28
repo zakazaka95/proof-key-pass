@@ -6,13 +6,16 @@ Proofcore is an independent open-source community tool for creating verifiable p
 contribution passports for Technocore agents. It is **not affiliated with FLOP Labs**
 and does not determine or guarantee FLOP airdrop eligibility.
 
+- Live app: [getproofcore.xyz](https://getproofcore.xyz)
+- Source: [github.com/zakazaka95/proof-key-pass](https://github.com/zakazaka95/proof-key-pass)
+
 > Proofcore verifies cryptographic contribution evidence. It does not determine airdrop
 > eligibility or guarantee rewards.
 
 ## What it does
 
 1. Verify a signed Technocore receipt (Ed25519, locally in the browser).
-2. Attach public X / GitHub / repository / commit / pull-request links.
+2. Attach public X / GitHub / repository links and public pull-request URLs.
 3. Fetch current public GitHub pull-request status.
 4. Export a 1200×630 PNG share card, a portable JSON passport bundle, and a plain-text
    proof summary.
@@ -37,25 +40,30 @@ It does **not** prove:
 The UI therefore separates three trust levels and never shows a single
 "everything verified" badge:
 
-| Level | Meaning |
-| --- | --- |
-| Cryptographically authenticated | DID, room, nonce, exact signed text, canonical payload, signature validity |
+| Level                                    | Meaning                                                                      |
+| ---------------------------------------- | ---------------------------------------------------------------------------- |
+| Cryptographically authenticated          | DID, room, nonce, exact signed text, canonical payload, signature validity   |
 | Internally consistent server observation | Service, sequence number, timestamp — present and consistent, **not signed** |
-| User-provided links | X, GitHub, repository, commit, pull requests — identity claims only |
+| User-provided links                      | X, GitHub, repository, commit, pull requests — identity claims only          |
 
 An optional live-server lookup may corroborate publication while a record is retained,
-but that still depends on the Technocore server and the TLS connection.
+but that still depends on the Technocore server and the TLS connection. Proofcore does
+not currently perform this lookup.
 
-## Local-only architecture
+## Browser-first architecture
 
-- No backend, no database, no accounts, no cookies, no analytics, no tracking.
+- No application data API, database or accounts.
 - No wallet connection, and **no private key is ever requested, received, stored or
   generated**.
 - JSON parsing, schema validation, base58btc/base64url decoding, Ed25519 verification,
   PNG rendering and downloads all happen client-side.
 - Uploaded avatars are read with `FileReader` and never transmitted.
-- The only network call is the optional public GitHub REST lookup you trigger yourself.
-- No `dangerouslySetInnerHTML` anywhere.
+- Receipt and avatar data never leave the browser. The only application feature that
+  calls an external API is the optional public GitHub REST lookup you trigger yourself;
+  ordinary hosting and font-asset requests are separate from that feature.
+- Hosting/CDN infrastructure may set strictly necessary security cookies. Visitor
+  analytics should remain disabled in the hosting dashboard.
+- Proofcore feature components do not inject receipt or identity data as HTML.
 
 ## Verification rules
 
@@ -108,3 +116,7 @@ bun run dev
 
 The only preloaded data is the public demo receipt mirrored from
 `technocore-node-helper/receipts/2026-08-26-v1.2.0.json`, always labelled **DEMO DATA**.
+
+## License
+
+[MIT](LICENSE)

@@ -1,5 +1,5 @@
 import type { PullRequestStatus } from "./github";
-import type { VerifiedReceipt } from "./technocore/verify";
+import type { VerificationFailureKind, VerifiedReceipt } from "./technocore/verify";
 
 export interface PassportInput {
   displayName: string;
@@ -15,9 +15,10 @@ export interface PassportData {
   input: PassportInput;
   verification:
     | { status: "verified"; result: VerifiedReceipt }
-    | { status: "invalid"; error: string }
+    | { status: "invalid"; error: string; kind: VerificationFailureKind }
     | { status: "none" };
   pullRequests: PullRequestStatus[];
+  githubFetchedAt: string | null;
   generatedAt: string;
   isDemo: boolean;
 }
@@ -34,11 +35,28 @@ export function contributionCount(data: PassportData): number {
   return prs + repo + receipt;
 }
 
+export function passportDisplayDid(data: PassportData): {
+  did: string;
+  authenticated: boolean;
+  claimMismatch: boolean;
+} {
+  const claimedDid = data.input.did.trim();
+  if (data.verification.status !== "verified") {
+    return { did: claimedDid, authenticated: false, claimMismatch: false };
+  }
+  const authenticatedDid = data.verification.result.authenticated.did;
+  return {
+    did: authenticatedDid,
+    authenticated: true,
+    claimMismatch: claimedDid.length > 0 && claimedDid !== authenticatedDid,
+  };
+}
+
 export function buildPassportBundle(data: PassportData) {
   const { input, verification, pullRequests, generatedAt } = data;
   return {
     format: "proofcore-passport",
-    formatVersion: 1,
+    formatVersion: 2,
     generator: "Proofcore (independent community tool)",
     disclaimer:
       "Proofcore verifies cryptographic contribution evidence. It does not determine airdrop eligibility or guarantee rewards.",
@@ -47,22 +65,41 @@ export function buildPassportBundle(data: PassportData) {
     identityClaims: {
       note: "User-provided. Not authenticated by the Ed25519 signature.",
       displayName: input.displayName,
+      publicDid: input.did,
       xHandle: input.xHandle,
       githubUsername: input.githubUsername,
       description: input.description,
       repositoryUrl: input.repositoryUrl,
+      pullRequestUrls: input.pullRequestUrls,
     },
     cryptographicallyAuthenticated:
       verification.status === "verified"
         ? {
+            receiptValid: true,
             signatureValid: true,
             ...verification.result.authenticated,
           }
-        : { signatureValid: false, error: verification.status === "invalid" ? verification.error : "no receipt provided" },
+        : verification.status === "invalid"
+          ? {
+              receiptValid: verification.kind === "internal" ? null : false,
+              signatureValid: verification.kind === "signature" ? false : null,
+              error: verification.error,
+            }
+          : {
+              receiptValid: null,
+              signatureValid: null,
+              error: "no receipt provided",
+            },
     unverifiedServerObservation:
+      verification.status === "verified" ? verification.result.unverifiedServerObservation : null,
+    verificationMaterial:
       verification.status === "verified"
-        ? verification.result.unverifiedServerObservation
+        ? {
+            note: "Strict Technocore v1 receipt for independent Ed25519 re-verification.",
+            sourceReceipt: verification.result.sourceReceipt,
+          }
         : null,
+    publicGithubStatusFetchedAt: data.githubFetchedAt,
     publicGithubStatus: pullRequests.map((pr) => ({
       url: pr.htmlUrl,
       repository: `${pr.ref.owner}/${pr.ref.repo}`,
@@ -98,20 +135,41 @@ export function buildProofSummary(data: PassportData): string {
     lines.push(`Seq: ${o.seq} (not authenticated)`);
     lines.push(`Timestamp: ${o.ts} (not authenticated)`);
   } else if (verification.status === "invalid") {
-    lines.push(`Ed25519 signature: NOT VALID — ${verification.error}`);
+    if (verification.kind === "signature") {
+      lines.push(`Ed25519 signature: INVALID — ${verification.error}`);
+    } else if (verification.kind === "internal") {
+      lines.push(`Verification could not complete — ${verification.error}`);
+      lines.push("Ed25519 signature: NOT ESTABLISHED");
+    } else {
+      lines.push(`Receipt verification: FAILED — ${verification.error}`);
+      lines.push("Ed25519 signature: NOT ESTABLISHED");
+    }
   } else {
     lines.push("No receipt supplied.");
   }
   lines.push("");
   lines.push("[User-provided identity — not authenticated]");
+  lines.push(`Public DID claim: ${input.did || "—"}`);
   lines.push(`X: ${input.xHandle || "—"}`);
   lines.push(`GitHub: ${input.githubUsername || "—"}`);
   lines.push(`Repository: ${input.repositoryUrl || "—"}`);
   lines.push("");
-  lines.push("[Public GitHub pull-request status]");
-  if (pullRequests.length === 0) {
-    lines.push("None provided.");
+  lines.push("[User-provided pull-request URLs — not authenticated]");
+  if (input.pullRequestUrls.length === 0) {
+    lines.push("None linked.");
   } else {
+    for (const url of input.pullRequestUrls) lines.push(`- ${url}`);
+  }
+  lines.push("");
+  lines.push("[Public GitHub pull-request status — fetched on request]");
+  if (pullRequests.length === 0) {
+    lines.push(
+      input.pullRequestUrls.length > 0
+        ? "Not fetched. Linked URLs are listed above."
+        : "No pull requests linked.",
+    );
+  } else {
+    lines.push(`Fetched at: ${data.githubFetchedAt ?? "unknown"}`);
     for (const pr of pullRequests) {
       lines.push(
         `- ${pr.ref.owner}/${pr.ref.repo}#${pr.ref.number} — ${pr.state.toUpperCase()}${

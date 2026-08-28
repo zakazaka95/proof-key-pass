@@ -66,7 +66,7 @@ export function ReceiptInput({ value, onChange, onClear }: ReceiptInputProps) {
           aria-label="Receipt JSON file"
           onChange={(event) => void readFile(event.target.files?.[0])}
         />
-        <p className="label-caps">Nothing leaves your browser</p>
+        <p className="label-caps">Receipt data stays in this browser</p>
       </div>
 
       {fileError ? (
@@ -76,10 +76,7 @@ export function ReceiptInput({ value, onChange, onClear }: ReceiptInputProps) {
       ) : null}
 
       <div className="space-y-2">
-        <label
-          htmlFor="receipt-json"
-          className="label-caps block"
-        >
+        <label htmlFor="receipt-json" className="label-caps block">
           Or paste receipt JSON
         </label>
         <textarea

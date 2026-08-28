@@ -4,8 +4,7 @@
  * Browser-safe: no Node Buffer, no dependencies.
  */
 
-const BASE58_ALPHABET =
-  "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+const BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
 export class TechnocoreError extends Error {}
 
