@@ -114,17 +114,16 @@
   }
 }
 
-@utility grid-lines {
-  background-image:
-    linear-gradient(to right, var(--color-border) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--color-border) 1px, transparent 1px);
-  background-size: 48px 48px;
-  opacity: 0.35;
-}
-
 @utility panel {
   border: 1px solid var(--color-border);
   background-color: var(--color-surface);
+  border-radius: calc(var(--radius) + 2px);
+}
+
+@utility panel-raised {
+  border: 1px solid var(--color-border-strong);
+  background-color: var(--color-surface-raised);
+  border-radius: calc(var(--radius) + 4px);
 }
 
 @utility label-caps {

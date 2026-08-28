@@ -54,53 +54,60 @@ function Landing() {
   return (
     <PageShell>
       <section className="relative overflow-hidden border-b border-border">
-        <div className="grid-lines pointer-events-none absolute inset-0" aria-hidden="true" />
-        <div className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
-          <span className="label-caps inline-flex items-center gap-2 border border-border px-2.5 py-1">
+        <div className="relative mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-32">
+          <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/3 opacity-20 sm:opacity-25" aria-hidden="true">
+            <div className="h-72 w-72 rounded-full border border-primary sm:h-96 sm:w-96" />
+            <div className="absolute inset-8 rounded-full border border-secondary sm:inset-12" />
+          </div>
+
+          <span className="label-caps inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5">
             <Logo className="h-3.5 w-3.5 text-primary" title="" /> Independent community tool
           </span>
-          <h1 className="mt-6 font-display text-4xl leading-[1.05] font-bold sm:text-6xl">
+
+          <h1 className="relative mt-8 font-display text-5xl leading-[1.05] font-bold tracking-tight sm:text-7xl">
             Prove the work.
             <br />
             Keep the keys.
           </h1>
-          <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+          <p className="relative mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
             Turn signed Technocore activity and open-source contributions into a
             portable, verifiable agent passport.
           </p>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <div className="relative mt-10 flex flex-col gap-3 sm:flex-row">
             <Link
               to="/verify"
-              className="inline-flex items-center justify-center bg-primary px-6 py-3 font-mono text-xs uppercase tracking-[0.16em] text-primary-foreground transition-opacity hover:opacity-90"
+              className="inline-flex items-center justify-center rounded-md bg-primary px-7 py-3.5 font-mono text-xs uppercase tracking-[0.14em] text-primary-foreground transition-opacity hover:opacity-90"
             >
               Verify a receipt
             </Link>
             <Link
               to="/passport"
               search={{ demo: true }}
-              className="inline-flex items-center justify-center border border-border-strong px-6 py-3 font-mono text-xs uppercase tracking-[0.16em] text-foreground transition-colors hover:border-primary hover:text-primary"
+              className="inline-flex items-center justify-center rounded-md border border-border-strong bg-surface px-7 py-3.5 font-mono text-xs uppercase tracking-[0.14em] text-foreground transition-colors hover:border-primary hover:text-primary"
             >
               View demo passport
             </Link>
           </div>
 
-          <Disclaimer className="mt-10 max-w-3xl" />
+          <Disclaimer className="relative mt-12 max-w-3xl" />
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+      <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
         <h2 className="label-caps">How it works</h2>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
+        <div className="mt-8 grid gap-5 md:grid-cols-3">
           {STEPS.map((step, index) => (
-            <article key={step.title} className="panel p-5">
+            <article key={step.title} className="panel-raised p-6 transition-colors hover:border-primary">
               <div className="flex items-center justify-between">
-                <step.icon className="size-5 text-primary" aria-hidden="true" />
+                <div className="inline-flex items-center justify-center rounded-md border border-border bg-background p-2.5">
+                  <step.icon className="size-5 text-primary" aria-hidden="true" />
+                </div>
                 <span className="font-mono text-xs text-muted-foreground">
                   0{index + 1}
                 </span>
               </div>
-              <h3 className="mt-4 font-display text-lg font-bold">{step.title}</h3>
+              <h3 className="mt-5 font-display text-lg font-bold">{step.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                 {step.body}
               </p>
@@ -109,20 +116,22 @@ function Landing() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
+      <section className="mx-auto max-w-6xl px-4 pb-24 sm:px-6">
         <h2 className="label-caps">Privacy posture</h2>
-        <div className="mt-6 grid gap-px border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {PRIVACY.map((item) => (
-            <div key={item.title} className="bg-surface p-5">
-              <item.icon className="size-5 text-primary" aria-hidden="true" />
-              <h3 className="mt-3 font-display text-base font-bold">{item.title}</h3>
+            <div key={item.title} className="panel p-5 transition-colors hover:border-primary">
+              <div className="inline-flex items-center justify-center rounded-md border border-border bg-background p-2">
+                <item.icon className="size-5 text-primary" aria-hidden="true" />
+              </div>
+              <h3 className="mt-4 font-display text-base font-bold">{item.title}</h3>
               <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
                 {item.body}
               </p>
             </div>
           ))}
         </div>
-        <p className="mt-6 text-sm leading-relaxed text-muted-foreground">
+        <p className="mt-8 max-w-3xl text-base leading-relaxed text-muted-foreground">
           Proofcore is an independent open-source community tool. It is not affiliated
           with FLOP Labs and does not determine or guarantee FLOP airdrop eligibility.{" "}
           <Link to="/trust" className="text-primary underline underline-offset-4">
