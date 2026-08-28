@@ -25,6 +25,9 @@ dist-ssr
 .wrangler/
 .dev.vars
 
+# Lovable project metadata (kept local, not published in Git)
+.lovable/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
