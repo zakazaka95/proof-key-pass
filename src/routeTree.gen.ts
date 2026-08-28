@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PassportRouteImport } from './routes/passport'
 import { Route as TrustRouteImport } from './routes/trust'
 import { Route as VerifyRouteImport } from './routes/verify'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PassportRoute = PassportRouteImport.update({
+  id: '/passport',
+  path: '/passport',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TrustRoute = TrustRouteImport.update({
@@ -31,30 +37,34 @@ const VerifyRoute = VerifyRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/passport': typeof PassportRoute
   '/trust': typeof TrustRoute
   '/verify': typeof VerifyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/passport': typeof PassportRoute
   '/trust': typeof TrustRoute
   '/verify': typeof VerifyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/passport': typeof PassportRoute
   '/trust': typeof TrustRoute
   '/verify': typeof VerifyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/trust' | '/verify'
+  fullPaths: '/' | '/passport' | '/trust' | '/verify'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/trust' | '/verify'
-  id: '__root__' | '/' | '/trust' | '/verify'
+  to: '/' | '/passport' | '/trust' | '/verify'
+  id: '__root__' | '/' | '/passport' | '/trust' | '/verify'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  PassportRoute: typeof PassportRoute
   TrustRoute: typeof TrustRoute
   VerifyRoute: typeof VerifyRoute
 }
@@ -66,6 +76,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/passport': {
+      id: '/passport'
+      path: '/passport'
+      fullPath: '/passport'
+      preLoaderRoute: typeof PassportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/trust': {
@@ -87,6 +104,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  PassportRoute: PassportRoute,
   TrustRoute: TrustRoute,
   VerifyRoute: VerifyRoute,
 }

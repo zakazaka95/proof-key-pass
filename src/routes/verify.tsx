@@ -192,6 +192,7 @@ function VerifyPage() {
             {result?.ok ? (
               <Link
                 to="/passport"
+                search={{ demo: false }}
                 className="inline-flex items-center justify-center border border-primary px-5 py-3 font-mono text-xs uppercase tracking-[0.16em] text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
               >
                 Build an Agent Passport

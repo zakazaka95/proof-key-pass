@@ -122,7 +122,8 @@ function TrustPage() {
             Verify a receipt
           </Link>{" "}
           or{" "}
-          <Link to="/passport" className="text-primary underline underline-offset-4">
+          <Link to="/passport"
+                search={{ demo: false }} className="text-primary underline underline-offset-4">
             build a passport
           </Link>
           .
