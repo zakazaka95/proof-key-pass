@@ -16,6 +16,8 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@noble/ed25519": "^3.1.0",
+    "@noble/hashes": "^2.4.0",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-aspect-ratio": "^1.1.8",
@@ -85,6 +87,7 @@
     "prettier": "^3.7.3",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
-    "vite": "8.1.5"
+    "vite": "8.1.5",
+    "vitest": "^4.1.11"
   }
 }
