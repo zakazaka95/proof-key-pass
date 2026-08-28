@@ -28,7 +28,7 @@ export function truncateDid(did: string, head = 22, tail = 8): string {
 }
 
 export function contributionCount(data: PassportData): number {
-  const prs = data.pullRequests.length;
+  const prs = Math.max(data.pullRequests.length, data.input.pullRequestUrls.length);
   const repo = data.input.repositoryUrl.trim() ? 1 : 0;
   const receipt = data.verification.status === "verified" ? 1 : 0;
   return prs + repo + receipt;
