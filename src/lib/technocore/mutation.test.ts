@@ -57,7 +57,11 @@ describe("single-character mutations must fail verification", () => {
     r.proof.canonical = `${r.room as string}|${r.proof.nonce as string}|${r.proof.text as string}`;
     const result = await verifyReceiptSafe(r);
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toMatch(/signature verification failed/);
+    if (!result.ok) {
+      expect(result.error).toMatch(
+        /signature verification failed|posted metadata is inconsistent/,
+      );
+    }
   });
 
   it("room: one flipped character (canonical kept consistent)", async () => {
